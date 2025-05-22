@@ -1,4 +1,4 @@
-# MultiAgent GitHub Crawler 🚀
+# CodePulse-Agents 🚀
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
@@ -33,8 +33,8 @@
 
 ### 安装
 ```bash
-git clone https://github.com/yourname/MultiAgent-GitHub-Crawler.git
-cd MultiAgent-GitHub-Crawler
+git clone https://github.com/Rick7117/CodePulse-Agents.git
+cd CodePulse-Agents
 pip install -r requirements.txt
 ```
 
@@ -94,19 +94,5 @@ graph TD
 5. 创建Pull Request
 
 ## 📜 许可证
-MIT © 2023 YourName
+MIT © 2023 Rick7117
 ```
-
----
-
-### 关键优化点：
-1. **多代理协作**：强调各代理的职责分工
-2. **合规性**：明确需要GitHub Token及获取方式
-3. **可视化架构**：使用mermaid图表展示工作流
-4. **场景化示例**：提供真实可运行的代码片段
-5. **输出展示**：让用户直观看到结果格式
-
-需要补充技术细节时可以添加：
-- `ADVANCED.md` 文件说明代理通信机制
-- `API_REFERENCE.md` 详细参数文档
-- 示例报告在 `/examples` 目录
