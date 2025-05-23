@@ -95,3 +95,7 @@ graph TD
 
 ## 📜 许可证
 MIT © 2023 Rick7117
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=CodePulse-Agents/CodePulse-Agents&type=Date)](https://www.star-history.com/#CodePulse-Agents/CodePulse-Agents&Date)

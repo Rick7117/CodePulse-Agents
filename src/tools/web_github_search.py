@@ -1,6 +1,7 @@
 import os 
 import requests
 from dotenv import load_dotenv
+from urllib.parse import urlparse
 import base64
 import json
 import tiktoken
@@ -80,6 +81,48 @@ def windows_compatible_name(s, max_length=255):
 
     return s
 
+def get_github_repo_metrics(dic):
+    """
+    获取指定GitHub项目的活跃度指标。
+
+    参数:
+    - dic (dict): 包含 'owner' 和 'repo' 键的字典。
+
+    返回:
+    - dict: 包含 Star 数、Fork 数、Watch 数量、Issues 数量的字典，
+            如果获取失败则返回 None。
+    """
+    github_token = os.getenv('GITHUB_TOKEN')
+    user_agent = os.getenv('search_user_agent')
+
+    owner = dic['owner']
+    repo = dic['repo']
+
+    headers = {
+        "Authorization": github_token,
+        "User-Agent": user_agent
+    }
+
+    url = f"https://api.github.com/repos/{owner}/{repo}"
+
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status() # 如果请求不成功（非2xx状态码），抛出HTTPError
+
+        repo_data = response.json()
+
+        metrics = {
+            "stars": repo_data.get('stargazers_count'),
+            "forks": repo_data.get('forks_count'),
+            "watchers": repo_data.get('subscribers_count'), # subscribers_count 是 watch 数量
+            "open_issues": repo_data.get('open_issues_count')
+        }
+        return metrics
+
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching GitHub metrics for {owner}/{repo}: {e}")
+        return None
+
 def get_github_readme(dic):
     
     github_token = os.getenv('GITHUB_TOKEN')
@@ -103,10 +146,16 @@ def get_github_readme(dic):
 
 def extract_github_repos(search_results):
     # 使用列表推导式筛选出项目主页链接
-    repo_links = [result['link'] for result in search_results if '/issues/' not in result['link'] and '/blob/' not in result['link'] and 'github.com' in result['link'] and len(result['link'].split('/')) == 5]
-
+    repo_links = [
+        result['link'] for result in search_results
+        if 'github.com' in result['link'] # 确保是github链接
+        and '/issues/' not in result['link'] # 排除issues链接
+        and '/blob/' not in result['link'] # 排除文件/目录链接
+        # 解析URL，获取路径，去除首尾斜杠，按斜杠分割，过滤空段，检查剩余段数是否为2 (owner/repo)
+        and len([segment for segment in urlparse(result['link']).path.strip('/').split('/') if segment]) == 2
+    ]
     # 从筛选后的链接中提取owner和repo
-    repos_info = [{'owner': link.split('/')[3], 'repo': link.split('/')[4]} for link in repo_links]
+    repos_info = [{'owner': link.split('/')[3], 'repo': link.split('/')[4], 'link': link} for link in repo_links]
 
     return repos_info
 
@@ -117,14 +166,18 @@ def get_search_text_github(q, dic):
 
     # 创建问题答案正文
     text = get_github_readme(dic)
+    metrics = get_github_repo_metrics(dic)
 
     # 写入本地json文件
     encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")     
     json_data = {
             "title": title,
+            'link': dic['link'],
             "content": text,
             "tokens": len(encoding.encode(text))
         }
+    if metrics:
+        json_data.update(metrics)
     
     # 自动创建目录，如果不存在的话
     dir_path = f'../auto_search/{q}'

@@ -1,4 +1,3 @@
 src/.env
 .DS_Store
-src/.DS_Store
-src/tools/.DS_Store
+src/auto_search/*
