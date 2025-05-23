@@ -1,6 +1,5 @@
 import os 
 import requests
-from dotenv import load_dotenv
 from urllib.parse import urlparse
 import base64
 import json
@@ -217,15 +216,15 @@ def get_search_text_github(q, dic):
         json_data.update(metrics)
     
     # 自动创建目录，如果不存在的话
-    dir_path = f'../auto_search/{q}'
+    dir_path = f'./auto_search/{q}'
     os.makedirs(dir_path, exist_ok=True)
     
-    with open('../auto_search/%s/%s.json' % (q, title), 'w') as f:
+    with open('./auto_search/%s/%s.json' % (q, title), 'w') as f:
         json.dump(json_data, f)
 
     return title
 
-def get_answer_github(q):
+def get_answer_github(q, g='globals()'):
     """
     当你无法回答某个问题时，调用该函数，能够获得答案
     :param q: 必选参数，询问的问题，字符串类型对象
@@ -240,7 +239,7 @@ def get_answer_github(q):
     results = extract_github_repos(search_results)
 
     # 创建对应问题的子文件夹
-    folder_path = '../auto_search/%s' % q
+    folder_path = './auto_search/%s' % q
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
     
@@ -250,7 +249,7 @@ def get_answer_github(q):
     
     for dic in results:
         title = get_search_text_github(q, dic)
-        with open('../auto_search/%s/%s.json' % (q, title), 'r') as f:
+        with open('./auto_search/%s/%s.json' % (q, title), 'r') as f:
             jd = json.load(f)
         num_tokens += jd['tokens']
         if num_tokens <= 12000:
@@ -259,8 +258,3 @@ def get_answer_github(q):
             break
     print('正在进行最后的整理...')
     return(content)
-
-if __name__ == "__main__":
-    load_dotenv()
-    results = get_answer_github('Slay the spire')
-    print(results)
