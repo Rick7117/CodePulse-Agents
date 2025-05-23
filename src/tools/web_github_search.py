@@ -123,6 +123,41 @@ def get_github_repo_metrics(dic):
         print(f"Error fetching GitHub metrics for {owner}/{repo}: {e}")
         return None
 
+def get_github_repo_languages(dic):
+    """
+    获取指定GitHub项目的编程语言组成。
+
+    参数:
+    - dic (dict): 包含 'owner' 和 'repo' 键的字典。
+
+    返回:
+    - dict: 包含各编程语言及其字节数的字典，
+            如果获取失败则返回 None。
+    """
+    github_token = os.getenv('GITHUB_TOKEN')
+    user_agent = os.getenv('search_user_agent')
+
+    owner = dic['owner']
+    repo = dic['repo']
+
+    headers = {
+        "Authorization": github_token,
+        "User-Agent": user_agent
+    }
+
+    url = f"https://api.github.com/repos/{owner}/{repo}/languages"
+
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()  # 如果请求不成功（非2xx状态码），抛出HTTPError
+
+        languages_data = response.json()
+        return languages_data
+
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching GitHub languages for {owner}/{repo}: {e}")
+        return None
+
 def get_github_readme(dic):
     
     github_token = os.getenv('GITHUB_TOKEN')
@@ -167,12 +202,14 @@ def get_search_text_github(q, dic):
     # 创建问题答案正文
     text = get_github_readme(dic)
     metrics = get_github_repo_metrics(dic)
+    languages = get_github_repo_languages(dic)
 
     # 写入本地json文件
     encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")     
     json_data = {
             "title": title,
-            'link': dic['link'],
+            "link": dic['link'],
+            "languages": languages,
             "content": text,
             "tokens": len(encoding.encode(text))
         }
