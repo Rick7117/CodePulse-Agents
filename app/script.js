@@ -357,50 +357,6 @@ function updateStarHistoryChart(projectLink, addRepo, event) { // Accept event o
     }
 }
 
-if (addRepo) {
-    // If adding, just show the current repo's history
-    currentRepos = [repoPath];
-} else {
-    // If removing, clear the chart
-    currentRepos = [];
-}
-
-if (starHistoryContainer) {
-    if (currentRepos.length > 0) {
-        const starHistoryLinkUrl = `https://www.star-history.com/#${currentRepos.join('&')}&Date`;
-        const starHistorySvgUrl = `https://api.star-history.com/svg?repos=${currentRepos.join(',')}&type=Date`;
-
-        starHistoryContainer.innerHTML = `
-            <a href="${starHistoryLinkUrl}" target="_blank">
-                <img src="${starHistorySvgUrl}" alt="Star History Chart" style="width: 100%; height: auto;">
-            </a>
-        `;
-    } else {
-        // If no repos are selected or on mouseout, clear the container
-        starHistoryContainer.innerHTML = '';
-    }
-} else if (currentRepos.length > 0) {
-     // If container does not exist and we need to show a chart, create it
-     starHistoryContainer = document.createElement('div');
-     starHistoryContainer.id = 'star-history-container';
-     const rightPanel = document.getElementById('right-panel');
-     const detailsContent = document.getElementById('project-details-content');
-     if (rightPanel && detailsContent) {
-         detailsContent.parentNode.insertBefore(starHistoryContainer, detailsContent);
-     } else if (rightPanelTitle) {
-         rightPanelTitle.parentNode.insertBefore(starHistoryContainer, rightPanelTitle.nextSibling);
-     }
-
-     const starHistoryLinkUrl = `https://www.star-history.com/#${currentRepos.join('&')}&Date`;
-     const starHistorySvgUrl = `https://api.star-history.com/svg?repos=${currentRepos.join(',')}&type=Date`;
-
-     starHistoryContainer.innerHTML = `
-         <a href="${starHistoryLinkUrl}" target="_blank">
-             <img src="${starHistorySvgUrl}" alt="Star History Chart" style="width: 100%; height: auto;">
-         </a>
-     `;
-}
-
 // Modify displaySearchResults to include a checkbox in each card
 function displaySearchResults(results) {
     const resultsContainer = document.getElementById('results-container');

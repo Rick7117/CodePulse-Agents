@@ -153,7 +153,7 @@ def search_projects():
     error_message = None
 
     ### 测试前端可以注释这段模型调用 ---
-    load_dotenv()
+    # load_dotenv()
     # API_KEY = os.getenv("API_KEY")
     # BASE_URL = os.getenv("BASE_URL")
     # MODEL = os.getenv("MODEL")
