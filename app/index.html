@@ -12,12 +12,14 @@
             <div class="container">
                 <h1>CodePulse</h1>
                 <div class="search-box">
-                    <input type="text" id="search-input" placeholder="Enter GitHub project keywords...">
-                    <button id="search-button">Search</button>
+                    <div class="search-input-wrapper">
+                        <input type="text" id="search-input" placeholder="Enter GitHub project keywords...">
+                        <button id="search-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16"><path d="M10.68 11.74a6 6 0 0 1-7.922-8.982 6 6 0 0 1 8.982 7.922l3.04 3.04a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215ZM11.5 7a4.499 4.499 0 1 0-8.997 0A4.499 4.499 0 0 0 11.5 7Z"></path></svg></button>
+                    </div>
                 </div>
                 <div id="results-container" class="results-container"></div>
-                <button id="process-button" style="display: none;">Process Selected</button>
-                <div id="final-output" class="final-output"></div>
+                <button id="process-button">Process Selected</button>
+                <div id="final-output" class="final-output" style="display: none;"></div>
             </div>
         </div>
         <!-- 添加可拖动的分隔条 -->

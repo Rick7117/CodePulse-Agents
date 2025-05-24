@@ -220,6 +220,7 @@ function addProjectCardEventListeners() {
 
                     detailsContent.innerHTML = `
                         ${languageHtml} <!-- Add language visualization -->
+                        <hr>
                         <p>${htmlContent}</p> <!-- Use parsed HTML content -->`;
 
                      // Insert languageHtml after the title
@@ -382,7 +383,9 @@ function displaySearchResults(results) {
 }
 
 // 添加分隔条拖动调整功能
+// console.log('Before DOMContentLoaded listener');
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOMContentLoaded event fired');
     const resizer = document.getElementById('resizer');
     const leftPanel = document.querySelector('.left-panel');
     const rightPanel = document.querySelector('.right-panel');
