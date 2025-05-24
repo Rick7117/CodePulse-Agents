@@ -257,4 +257,21 @@ def get_answer_github(q, g='globals()'):
         else:
             break
     print('正在进行最后的整理...')
-    return(content)
+    # Instead of returning concatenated content, return the list of found repositories
+    # Augment results with name and description from initial search results
+    formatted_results = []
+    for repo_info in results:
+        # Find the corresponding original search result to get title and snippet
+        original_search_result = next(
+            (item for item in search_results if item['link'] == repo_info['link']),
+            None
+        )
+        if original_search_result:
+            formatted_results.append({
+                'name': original_search_result.get('title', '').replace(' - GitHub', '').strip(), # Clean up title
+                'description': original_search_result.get('snippet', 'No description available.'),
+                'html_url': repo_info['link']
+            })
+
+    # Return the list of formatted results as a JSON string
+    return json.dumps(formatted_results)
