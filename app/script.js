@@ -6,6 +6,16 @@ document.getElementById('search-button').addEventListener('click', async () => {
     resultsContainer.innerHTML = 'Searching...';
     document.getElementById('process-button').style.display = 'none';
     document.getElementById('final-output').innerHTML = '';
+    
+    // 重置右侧面板标题和内容
+    const detailsTitle = document.getElementById('project-details-title');
+    if (detailsTitle) {
+        detailsTitle.textContent = '项目详情';
+    }
+    const detailsContent = document.getElementById('project-details-content');
+    if (detailsContent) {
+        detailsContent.innerHTML = '请选择一个项目查看详情。';
+    }
 
     try {
         // Call the backend API to search for projects
@@ -85,20 +95,22 @@ function addProjectCardEventListeners() {
     let selectedProjectCard = null; // Keep track of the currently selected card
 
     document.querySelectorAll('.project-card').forEach(card => {
-        // Add click listener to the card for showing details and toggling checkbox
+        // Add click listener to the card for showing details
         card.addEventListener('click', async (event) => {
             // Prevent clicking the stats from triggering the card click
             if (event.target.closest('.project-stats')) {
                 return;
             }
+            
+            // 如果点击的是复选框，不执行卡片的选择逻辑
+            if (event.target.classList.contains('project-checkbox')) {
+                return;
+            }
 
-            // Toggle the checkbox state
+            // Find the checkbox within the clicked card and toggle its checked state
             const checkbox = card.querySelector('.project-checkbox');
             if (checkbox) {
                 checkbox.checked = !checkbox.checked;
-                // Manually trigger the change event to update Star History if needed
-                // const changeEvent = new Event('change');
-                // checkbox.dispatchEvent(changeEvent);
             }
 
             // Remove 'selected' class from the previously selected card
@@ -121,12 +133,30 @@ function addProjectCardEventListeners() {
                 return;
             }
             const projectTitle = projectTitleElement.textContent; // Get the title text
+            
+            // 更新右侧面板标题显示项目名称
+            const detailsTitle = document.getElementById('project-details-title');
+            if (detailsTitle) {
+                detailsTitle.textContent = projectTitle;
+            }
 
             // Get the current search query from the input field
             const currentQuery = document.getElementById('search-input').value; // Added to get query
 
             const detailsContent = document.getElementById('project-details-content');
             if (detailsContent) {
+                // 先清空右侧屏幕中之前的内容
+                detailsContent.innerHTML = '';
+                
+                // 显示加载指示器
+                const loadingDiv = document.createElement('div');
+                loadingDiv.className = 'loading-indicator';
+                loadingDiv.innerHTML = `
+                    <div class="spinner"></div>
+                    <p>正在总结...</p>
+                `;
+                detailsContent.appendChild(loadingDiv);
+
                 // Fetch project details from the backend
                 try {
                     const response = await fetch('/project_details', {
@@ -201,14 +231,24 @@ function addProjectCardEventListeners() {
             }
         });
 
+        // 为复选框添加单独的点击事件监听器
+        const checkbox = card.querySelector('.project-checkbox');
+        if (checkbox) {
+            checkbox.addEventListener('click', (event) => {
+                // 阻止事件冒泡，防止触发卡片的点击事件
+                event.stopPropagation();
+                // 复选框状态在点击时已自动切换，无需手动切换
+            });
+        }
+
         // Add mouseover and mouseout listeners to the project stats for Star History
         const projectStats = card.querySelector('.project-stats');
         if (projectStats) {
             projectStats.addEventListener('mouseover', (event) => {
                 const projectLinkElement = card.querySelector('.project-info a');
                 if (projectLinkElement) {
-                    // Add the current project to the Star History chart
-                    updateStarHistoryChart(projectLinkElement.href, true);
+                    // Add the current project to the Star History chart, passing the event object
+                    updateStarHistoryChart(projectLinkElement.href, true, event);
                 }
             });
 
@@ -246,84 +286,119 @@ addProjectCardEventListeners();
 });
 
 
-function updateStarHistoryChart(projectLink, addRepo) {
-    const rightPanelTitle = document.querySelector('#right-panel h2');
-    if (!rightPanelTitle) return; // Ensure right panel is visible
+function updateStarHistoryChart(projectLink, addRepo, event) { // Accept event object
+    console.log('updateStarHistoryChart called with:', { projectLink, addRepo, event }); // Add logging
 
     let starHistoryContainer = document.getElementById('star-history-container');
 
-    // Extract repo path from project link
-    let repoPath = '';
-    try {
-        const url = new URL(projectLink);
-        // Assuming GitHub links are in the format https://github.com/owner/repo
-        const pathParts = url.pathname.split('/').filter(part => part !== '');
-        if (pathParts.length >= 2) {
-            repoPath = `${pathParts[0]}/${pathParts[1]}`;
-        }
-    } catch (e) {
-        console.error('Error parsing project link:', e);
-        if (addRepo && starHistoryContainer) {
-             starHistoryContainer.innerHTML = '<p>Could not generate Star History chart (invalid link).</p>';
-        }
-        return;
+    // Create the container if it doesn't exist
+    if (!starHistoryContainer) {
+        starHistoryContainer = document.createElement('div');
+        starHistoryContainer.id = 'star-history-container';
+        document.body.appendChild(starHistoryContainer);
+        // Add basic styles for floating container
+        starHistoryContainer.style.cssText = 'position: absolute; background-color: white; border: 1px solid #ccc; padding: 10px; z-index: 1000; box-shadow: 2px 2px 5px rgba(0,0,0,0.3); display: none; max-width: 400px; height: auto;'; // Adjusted styles for floating box
+         // Remove click listener to close the container (mouseout will handle hiding)
+        // starHistoryContainer.addEventListener('click', (event) => {
+        //      // Close only if clicking the background, not the image/link
+        //     if (event.target === starHistoryContainer) {
+        //         starHistoryContainer.style.display = 'none';
+        //         starHistoryContainer.innerHTML = ''; // Clear content on close
+        //     }
+        // });
     }
 
-    if (!repoPath) {
-        if (addRepo && starHistoryContainer) {
-             starHistoryContainer.innerHTML = '<p>Could not generate Star History chart (invalid link).</p>';
+    // Logic for showing/hiding the floating container
+    if (addRepo && event) { // Only show if adding and event object is available
+        // Position the container near the mouse cursor
+        const offsetX = 20; // Offset to the right of the cursor
+        const offsetY = 10; // Offset below the cursor
+        starHistoryContainer.style.left = `${event.clientX + offsetX}px`;
+        starHistoryContainer.style.top = `${event.clientY + offsetY}px`;
+
+        // If adding, show the chart in the floating container
+        let repoPath = '';
+        try {
+            const url = new URL(projectLink);
+            // Assuming GitHub links are in the format https://github.com/owner/repo
+            const pathParts = url.pathname.split('/').filter(part => part !== '');
+            if (pathParts.length >= 2) {
+                repoPath = `${pathParts[0]}/${pathParts[1]}`;
+            }
+        } catch (e) {
+            console.error('Error parsing project link:', e);
+            starHistoryContainer.innerHTML = '<p style="color: white;">Could not generate Star History chart (invalid link).</p>'; // Added style for visibility
+            starHistoryContainer.style.display = 'flex'; // Show the container
+            return;
         }
-        return;
-    }
 
-    let currentRepos = [];
-    // Get currently selected repos from checkboxes (this logic needs update as checkboxes are removed)
-    // For now, let's assume we only show the hovered project's star history
-    // If you need to show hovered + selected, you'll need a different way to track selected projects
+        console.log('Extracted repoPath:', repoPath); // Add logging
 
-    if (addRepo) {
-        // If adding, just show the current repo's history
-        currentRepos = [repoPath];
+        if (!repoPath) {
+            starHistoryContainer.innerHTML = '<p style="color: white;">Could not generate Star History chart (invalid link).</p>'; // Added style for visibility
+            starHistoryContainer.style.display = 'flex'; // Show the container
+            return;
+        }
+
+        const starHistoryLinkUrl = `https://www.star-history.com/#${repoPath}&Date`;
+        const starHistorySvgUrl = `https://api.star-history.com/svg?repos=${repoPath}&type=Date`;
+
+        starHistoryContainer.innerHTML = `
+            <a href="${starHistoryLinkUrl}" target="_blank">
+                <img src="${starHistorySvgUrl}" alt="Star History Chart" style="max-width: 100%; height: auto;">
+            </a>
+        `; // Adjusted image style
+        starHistoryContainer.style.display = 'block'; // Show the container
+
     } else {
-        // If removing, clear the chart
-        currentRepos = [];
+        // If removing (mouse out), hide the container and clear content
+        starHistoryContainer.style.display = 'none';
+        starHistoryContainer.innerHTML = '';
     }
+}
 
-    if (starHistoryContainer) {
-        if (currentRepos.length > 0) {
-            const starHistoryLinkUrl = `https://www.star-history.com/#${currentRepos.join('&')}&Date`;
-            const starHistorySvgUrl = `https://api.star-history.com/svg?repos=${currentRepos.join(',')}&type=Date`;
+if (addRepo) {
+    // If adding, just show the current repo's history
+    currentRepos = [repoPath];
+} else {
+    // If removing, clear the chart
+    currentRepos = [];
+}
 
-            starHistoryContainer.innerHTML = `
-                <a href="${starHistoryLinkUrl}" target="_blank">
-                    <img src="${starHistorySvgUrl}" alt="Star History Chart" style="width: 100%; height: auto;">
-                </a>
-            `;
-        } else {
-            // If no repos are selected or on mouseout, clear the container
-            starHistoryContainer.innerHTML = '';
-        }
-    } else if (currentRepos.length > 0) {
-         // If container does not exist and we need to show a chart, create it
-         starHistoryContainer = document.createElement('div');
-         starHistoryContainer.id = 'star-history-container';
-         const rightPanel = document.getElementById('right-panel');
-         const detailsContent = document.getElementById('project-details-content');
-         if (rightPanel && detailsContent) {
-             detailsContent.parentNode.insertBefore(starHistoryContainer, detailsContent);
-         } else if (rightPanelTitle) {
-             rightPanelTitle.parentNode.insertBefore(starHistoryContainer, rightPanelTitle.nextSibling);
-         }
+if (starHistoryContainer) {
+    if (currentRepos.length > 0) {
+        const starHistoryLinkUrl = `https://www.star-history.com/#${currentRepos.join('&')}&Date`;
+        const starHistorySvgUrl = `https://api.star-history.com/svg?repos=${currentRepos.join(',')}&type=Date`;
 
-         const starHistoryLinkUrl = `https://www.star-history.com/#${currentRepos.join('&')}&Date`;
-         const starHistorySvgUrl = `https://api.star-history.com/svg?repos=${currentRepos.join(',')}&type=Date`;
-
-         starHistoryContainer.innerHTML = `
-             <a href="${starHistoryLinkUrl}" target="_blank">
-                 <img src="${starHistorySvgUrl}" alt="Star History Chart" style="width: 100%; height: auto;">
-             </a>
-         `;
+        starHistoryContainer.innerHTML = `
+            <a href="${starHistoryLinkUrl}" target="_blank">
+                <img src="${starHistorySvgUrl}" alt="Star History Chart" style="width: 100%; height: auto;">
+            </a>
+        `;
+    } else {
+        // If no repos are selected or on mouseout, clear the container
+        starHistoryContainer.innerHTML = '';
     }
+} else if (currentRepos.length > 0) {
+     // If container does not exist and we need to show a chart, create it
+     starHistoryContainer = document.createElement('div');
+     starHistoryContainer.id = 'star-history-container';
+     const rightPanel = document.getElementById('right-panel');
+     const detailsContent = document.getElementById('project-details-content');
+     if (rightPanel && detailsContent) {
+         detailsContent.parentNode.insertBefore(starHistoryContainer, detailsContent);
+     } else if (rightPanelTitle) {
+         rightPanelTitle.parentNode.insertBefore(starHistoryContainer, rightPanelTitle.nextSibling);
+     }
+
+     const starHistoryLinkUrl = `https://www.star-history.com/#${currentRepos.join('&')}&Date`;
+     const starHistorySvgUrl = `https://api.star-history.com/svg?repos=${currentRepos.join(',')}&type=Date`;
+
+     starHistoryContainer.innerHTML = `
+         <a href="${starHistoryLinkUrl}" target="_blank">
+             <img src="${starHistorySvgUrl}" alt="Star History Chart" style="width: 100%; height: auto;">
+         </a>
+     `;
 }
 
 // Modify displaySearchResults to include a checkbox in each card
@@ -349,3 +424,62 @@ function displaySearchResults(results) {
         resultsContainer.innerHTML = '<p>No results found.</p>';
     }
 }
+
+// 添加分隔条拖动调整功能
+document.addEventListener('DOMContentLoaded', function() {
+    const resizer = document.getElementById('resizer');
+    const leftPanel = document.querySelector('.left-panel');
+    const rightPanel = document.querySelector('.right-panel');
+    let isResizing = false;
+    let initialX;
+    let initialLeftWidth;
+
+    // 鼠标按下事件
+    resizer.addEventListener('mousedown', function(e) {
+        isResizing = true;
+        initialX = e.clientX;
+        initialLeftWidth = leftPanel.getBoundingClientRect().width;
+        
+        // 添加resizing类，改变分隔条样式
+        resizer.classList.add('resizing');
+        
+        // 防止选中文本
+        document.body.style.userSelect = 'none';
+    });
+
+    // 鼠标移动事件
+    document.addEventListener('mousemove', function(e) {
+        if (!isResizing) return;
+        
+        const deltaX = e.clientX - initialX;
+        const newLeftWidth = initialLeftWidth + deltaX;
+        const containerWidth = document.querySelector('.main-layout').getBoundingClientRect().width;
+        
+        // 确保左右面板不会小于最小宽度
+        const minWidth = 300; // 与CSS中设置的最小宽度一致
+        if (newLeftWidth >= minWidth && (containerWidth - newLeftWidth - resizer.offsetWidth) >= minWidth) {
+            // 设置左面板宽度
+            leftPanel.style.flex = '0 0 ' + newLeftWidth + 'px';
+            // 右面板自动调整
+            rightPanel.style.flex = '1';
+        }
+    });
+
+    // 鼠标释放事件
+    document.addEventListener('mouseup', function() {
+        if (isResizing) {
+            isResizing = false;
+            resizer.classList.remove('resizing');
+            document.body.style.userSelect = '';
+        }
+    });
+
+    // 鼠标离开窗口事件
+    document.addEventListener('mouseleave', function() {
+        if (isResizing) {
+            isResizing = false;
+            resizer.classList.remove('resizing');
+            document.body.style.userSelect = '';
+        }
+    });
+});

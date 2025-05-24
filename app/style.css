@@ -6,24 +6,41 @@ body {
     overflow: hidden; /* Prevent scrollbar on body */
 }
 
+/* 分隔条样式 */
+.resizer {
+    width: 8px;
+    background-color: #ddd;
+    cursor: col-resize;
+    position: relative;
+    z-index: 10;
+}
+
+.resizer:hover, .resizer.resizing {
+    background-color: #aaa;
+}
+
+/* 修改左右面板样式，使其可以调整大小 */
 .main-layout {
     display: flex;
     height: 100vh; /* Full viewport height */
+    overflow: hidden;
 }
 
 .left-panel {
-    flex: 1; /* Takes up half the width */
+    flex: 1; /* 默认占比 */
     overflow-y: auto; /* Add scrollbar if content overflows */
     padding: 20px;
     background-color: #fff;
+    min-width: 300px; /* 最小宽度 */
 }
 
 .right-panel {
-    flex: 1; /* Takes up the other half */
+    flex: 1; /* 默认占比 */
     overflow-y: auto; /* Add scrollbar if content overflows */
     padding: 20px;
     background-color: #e9e9e9; /* Different background for distinction */
     border-left: 1px solid #ccc;
+    min-width: 300px; /* 最小宽度 */
 }
 
 .container {
@@ -239,4 +256,28 @@ h1 {
     height: 10px;
     margin-right: 5px; /* Space between color square and text */
     border-radius: 2px; /* Slightly rounded corners for color square */
+}
+
+/* 加载指示器样式 */
+.loading-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    border-top: 4px solid #3498db;
+    animation: spin 1s linear infinite;
+    margin-bottom: 10px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }

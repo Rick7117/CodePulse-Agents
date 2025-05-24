@@ -1,3 +1,10 @@
+import os
+import requests
+from urllib.parse import urlparse
+import base64
+import json
+import tiktoken
+import time
 from src.tools.tools_definitions import tools, available_functions
 import os, json
 from dotenv import load_dotenv
@@ -6,6 +13,21 @@ import httpx
 from flask import Flask, request, jsonify, send_from_directory
 
 app = Flask(__name__, static_folder='app')
+
+def format_markdown_output(text):
+    """
+    Formats the markdown output from the model by removing surrounding markdown code block syntax.
+
+    Args:
+        text (str): The input string, potentially containing markdown code block syntax.
+
+    Returns:
+        str: The formatted string with surrounding markdown code block syntax removed.
+    """
+    if text and text.strip().startswith('```markdown\n') and text.strip().endswith('\n```'):
+        # Remove the starting and ending markdown code block syntax
+        text = text.strip()[len('```markdown\n'):-len('\n```')]
+    return text.strip()
 
 def print_code_if_exists(function_args):
     """
@@ -66,10 +88,11 @@ def create_function_response_messages(messages, response):
             function_response = "函数运行报错如下:" + str(e)
 
         # 拼接消息队列
+        # 确保 function_response 是字符串，即使它是 None
         messages.append(
             {
                 "role": "tool",
-                "content": function_response,
+                "content": str(function_response), # 将结果转换为字符串
                 "tool_call_id": function_call_message.id,
             }
         )
@@ -99,6 +122,7 @@ def chat_base(messages, client, model):
     if response.choices[0].finish_reason == "tool_calls":
         while True:
             messages = create_function_response_messages(messages, response)
+            print(messages)
             response = client.chat.completions.create(
                 model=model,  
                 messages=messages,
@@ -128,9 +152,22 @@ def search_projects():
     results = []
     error_message = None
 
-    # --- Temporarily read results from ./auto_search instead of calling the model ---
-    # --- Temporarily read results from ./auto_search instead of calling the model ---
-    # In a real application, you would call the model and process its response here.
+    ### 测试前端可以注释这段模型调用 ---
+    load_dotenv()
+    # API_KEY = os.getenv("API_KEY")
+    # BASE_URL = os.getenv("BASE_URL")
+    # MODEL = os.getenv("MODEL")
+    # no_proxy_transport = httpx.HTTPTransport()
+    # client_no_proxy = OpenAI(
+    #     api_key=API_KEY,
+    #     base_url=BASE_URL,
+    #     http_client=httpx.Client(transport=no_proxy_transport)
+    # )
+
+    # messages=[{"role": "user", "content": f"帮我寻找一些和{query}相关的github项目"}]
+    # response = chat_base(messages=messages, client=client_no_proxy, model=MODEL)
+    # ### 
+
     auto_search_dir_path = f'./auto_search/{query}'
     all_projects = []
     error_message = None
@@ -192,7 +229,8 @@ def process_selected():
 @app.route('/project_details', methods=['POST'])
 def project_details():
     data = request.json
-    project_id = data.get('id')
+    project_id = data.get('id').replace('/', '_', 1) if data.get('id') else None
+    
     # Assuming query is also sent in the request for now, or use a default/global query
     # In a real app, you might need to store the query associated with the project_id
     query = data.get('query', 'default_query') # Added to get query from request or use default
@@ -213,7 +251,8 @@ def project_details():
                     'title': data.get('title', project_id), # Use title from file if available, otherwise use id
                     'content': data.get('content', 'Content not found.'), # Read content field
                     'link': data.get('link', project_id), # Use link from file if available, otherwise use id
-                    'languages': data.get('languages', 'Language not found.') # Read languages field
+                    'languages': data.get('languages', 'Language not found.'), # Read languages field
+                    'summary': data.get('summary', 'Summary not found.') # Read summary field
                 }
             print(f"Successfully read project data from {file_path}") # Added for debugging
         except FileNotFoundError:
@@ -232,10 +271,37 @@ def project_details():
 
     if not project_data:
         return jsonify({'error': 'Project not found or could not be read'}), 404 # Modified error message
+    # 如果不存在 summary 字段，则调用模型生成
+    print(f"project_data keys: {project_data.keys()}")
+    if 'Summary not found.' == project_data.get('summary'):
+        print("No summary found, generating one...")
+        load_dotenv()
+        API_KEY = os.getenv("API_KEY")
+        BASE_URL = os.getenv("BASE_URL")
+        MODEL = os.getenv("MODEL")
+        no_proxy_transport = httpx.HTTPTransport()
+        client_no_proxy = OpenAI(
+            api_key=API_KEY,
+            base_url=BASE_URL,
+            http_client=httpx.Client(transport=no_proxy_transport)
+        )
+
+        messages=[{"role": "user", "content": f"根据github项目的readme文档的描述，直接返回一个markdown文档总结项目的主要功能和特点， 不要有额外的提示词。项目的readme文档的描述如下：{project_data.get('content')}"}]
+        response, _ = chat_base(messages=messages, client=client_no_proxy, model=MODEL)
+        print(f"summary from chat_base: {response}")
+        if response is None:
+            return jsonify({'error': 'Failed to get response from chat_base'}), 500
+        # 将模型的回答保存到原来的搜索数据的json文件中
+        # Format the summary before saving and returning
+        formatted_summary = format_markdown_output(response.choices[0].message.content)
+        project_data['summary'] = formatted_summary
+        # 保存到文件
+        with open(f'./auto_search/{query}/{project_id}.json', 'w') as f:
+            json.dump(project_data, f)
 
     return jsonify({
         'title': project_data.get('title'),
-        'content': project_data.get('content'),
+        'content': project_data.get('summary'),
         'link': project_data.get('link'),
         'language': project_data.get('languages')
     })

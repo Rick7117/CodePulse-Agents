@@ -4,6 +4,7 @@ from urllib.parse import urlparse
 import base64
 import json
 import tiktoken
+import time
 
 
 def google_search(query, num_results=10, site_url=None):
@@ -80,6 +81,42 @@ def windows_compatible_name(s, max_length=255):
 
     return s
 
+def _github_api_request_with_retry(url, headers, retries=3, wait_time=5):
+    """
+    Helper function to make GitHub API requests with retry and rate limit handling.
+
+    Args:
+        url (str): The API endpoint URL.
+        headers (dict): Request headers, including Authorization and User-Agent.
+        retries (int): Maximum number of retries.
+        wait_time (int): Initial wait time between retries in seconds.
+
+    Returns:
+        requests.Response or None: The response object if successful, None otherwise.
+    """
+    for i in range(retries):
+        try:
+            response = requests.get(url, headers=headers)
+            print(f"Request to {url} status: {response.status_code}")
+            if response.status_code == 200:
+                return response
+            elif response.status_code == 403:
+                reset_time = int(response.headers.get('X-RateLimit-Reset', 0))
+                sleep_duration = max(reset_time - time.time(), 0) + 5  # Add 5 seconds buffer
+                print(f"Rate limited. Waiting {sleep_duration} seconds...")
+                time.sleep(sleep_duration)
+            else:
+                response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching {url}: {e}")
+            if i < retries - 1:
+                print(f"Retrying in {wait_time} seconds...")
+                time.sleep(wait_time)
+            else:
+                print(f"Failed to fetch {url} after {retries} retries.")
+                return None
+    return None # Should not reach here if retries > 0 and all fail
+
 def get_github_repo_metrics(dic):
     """
     获取指定GitHub项目的活跃度指标。
@@ -104,12 +141,10 @@ def get_github_repo_metrics(dic):
 
     url = f"https://api.github.com/repos/{owner}/{repo}"
 
-    try:
-        response = requests.get(url, headers=headers)
-        response.raise_for_status() # 如果请求不成功（非2xx状态码），抛出HTTPError
+    response = _github_api_request_with_retry(url, headers)
 
+    if response:
         repo_data = response.json()
-
         metrics = {
             "stars": repo_data.get('stargazers_count'),
             "forks": repo_data.get('forks_count'),
@@ -117,9 +152,8 @@ def get_github_repo_metrics(dic):
             "open_issues": repo_data.get('open_issues_count')
         }
         return metrics
-
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching GitHub metrics for {owner}/{repo}: {e}")
+    else:
+        print(f"Failed to fetch GitHub metrics for {owner}/{repo}.")
         return None
 
 def get_github_repo_languages(dic):
@@ -146,15 +180,45 @@ def get_github_repo_languages(dic):
 
     url = f"https://api.github.com/repos/{owner}/{repo}/languages"
 
-    try:
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()  # 如果请求不成功（非2xx状态码），抛出HTTPError
+    response = _github_api_request_with_retry(url, headers)
 
+    if response:
         languages_data = response.json()
         return languages_data
+    else:
+        print(f"Failed to fetch GitHub languages for {owner}/{repo}.")
+        return None
 
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching GitHub languages for {owner}/{repo}: {e}")
+def get_github_repo_description(dic):
+    """
+    获取指定GitHub项目的描述。
+
+    参数:
+    - dic (dict): 包含 'owner' 和 'repo' 键的字典。
+
+    返回:
+    - str: 项目的描述字符串，如果获取失败或没有描述则返回 None。
+    """
+    github_token = os.getenv('GITHUB_TOKEN')
+    user_agent = os.getenv('search_user_agent')
+
+    owner = dic['owner']
+    repo = dic['repo']
+
+    headers = {
+        "Authorization": github_token,
+        "User-Agent": user_agent
+    }
+
+    url = f"https://api.github.com/repos/{owner}/{repo}"
+
+    response = _github_api_request_with_retry(url, headers)
+
+    if response:
+        repo_data = response.json()
+        return repo_data.get('description')
+    else:
+        print(f"Failed to fetch GitHub description for {owner}/{repo}.")
         return None
 
 def get_github_readme(dic):
@@ -170,13 +234,18 @@ def get_github_readme(dic):
         "User-Agent": user_agent
     }
 
-    response = requests.get(f"https://api.github.com/repos/{owner}/{repo}/readme", headers=headers)
+    url = f"https://api.github.com/repos/{owner}/{repo}/readme"
 
-    readme_data = response.json()
-    encoded_content = readme_data.get('content', '')
-    decoded_content = base64.b64decode(encoded_content).decode('utf-8')
-    
-    return decoded_content
+    response = _github_api_request_with_retry(url, headers)
+
+    if response:
+        readme_data = response.json()
+        encoded_content = readme_data.get('content', '')
+        decoded_content = base64.b64decode(encoded_content).decode('utf-8')
+        return decoded_content
+    else:
+        print(f"Failed to fetch GitHub README for {owner}/{repo}.")
+        return None
 
 def extract_github_repos(search_results):
     # 使用列表推导式筛选出项目主页链接
@@ -202,18 +271,22 @@ def get_search_text_github(q, dic):
     text = get_github_readme(dic)
     metrics = get_github_repo_metrics(dic)
     languages = get_github_repo_languages(dic)
+    description = get_github_repo_description(dic)
 
     # 写入本地json文件
     encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")     
     json_data = {
-            "title": title,
+            "title": dic['owner'] + '/' + dic['repo'],
             "link": dic['link'],
             "languages": languages,
+            "about": description,
             "content": text,
             "tokens": len(encoding.encode(text))
         }
     if metrics:
         json_data.update(metrics)
+    if description:
+        json_data['description'] = description
     
     # 自动创建目录，如果不存在的话
     dir_path = f'./auto_search/{q}'
@@ -256,22 +329,22 @@ def get_answer_github(q, g='globals()'):
             content += jd['content']
         else:
             break
-    print('正在进行最后的整理...')
-    # Instead of returning concatenated content, return the list of found repositories
-    # Augment results with name and description from initial search results
-    formatted_results = []
-    for repo_info in results:
-        # Find the corresponding original search result to get title and snippet
-        original_search_result = next(
-            (item for item in search_results if item['link'] == repo_info['link']),
-            None
-        )
-        if original_search_result:
-            formatted_results.append({
-                'name': original_search_result.get('title', '').replace(' - GitHub', '').strip(), # Clean up title
-                'description': original_search_result.get('snippet', 'No description available.'),
-                'html_url': repo_info['link']
-            })
+    # print('正在进行最后的整理...')
+    # # Instead of returning concatenated content, return the list of found repositories
+    # # Augment results with name and description from initial search results
+    # formatted_results = []
+    # for repo_info in results:
+    #     # Find the corresponding original search result to get title and snippet
+    #     original_search_result = next(
+    #         (item for item in search_results if item['link'] == repo_info['link']),
+    #         None
+    #     )
+    #     if original_search_result:
+    #         formatted_results.append({
+    #             'name': original_search_result.get('title', '').replace(' - GitHub', '').strip(), # Clean up title
+    #             'description': original_search_result.get('snippet', 'No description available.'),
+    #             'html_url': repo_info['link']
+    #         })
 
-    # Return the list of formatted results as a JSON string
-    return json.dumps(formatted_results)
+    # # Return the list of formatted results as a JSON string
+    # return json.dumps(formatted_results)
