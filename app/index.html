@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodePulse</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="main-layout">
+        <div class="left-panel">
+            <div class="container">
+                <h1>CodePulse</h1>
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="Enter GitHub project keywords...">
+                    <button id="search-button">Search</button>
+                </div>
+                <div id="results-container" class="results-container"></div>
+                <button id="process-button" style="display: none;">Process Selected</button>
+                <div id="final-output" class="final-output"></div>
+            </div>
+        </div>
+        <div class="right-panel" id="right-panel">
+            <!-- Project details will be loaded here -->
+            <h2>Project Details</h2>
+            <div id="project-details-content">请选择一个项目查看详情。</div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script> <!-- Added marked library -->
+</body>
+</html>

@@ -1,0 +1,14 @@
+{
+    "title": "PokemonTCG_pokemon-tcg-data",
+    "link": "https://github.com/PokemonTCG/pokemon-tcg-data",
+    "about": "The data found within the Pokémon TCG API",
+    "languages": {
+        "Ruby": 1822
+    },
+    "content": "# Pok\u00e9mon TCG Data\n\n[![Discord](https://img.shields.io/badge/Pok\u00e9mon%20TCG%20Developers-%237289DA.svg?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/dpsTCvg)\n[![Patreon](https://img.shields.io/badge/Patreon-F96854?style=for-the-badge&logo=patreon&logoColor=white)](https://www.patreon.com/bePatron?u=8336557)\n[![Ko-Fi](https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/Z8Z25AVR)\n\n\nThis is the data found within the [Pok\u00e9mon TCG API](https://pokemontcg.io/). Currently, the raw JSON files for all the card information can be found here.\n\nIf you find this data useful, consider donating via one of the links above. All donations are greatly appreciated!\n\n# Downloading the data\n\nThe easiest way to stay up to date and interact with the data is via the [Pok\u00e9mon TCG API](http://pokemontcg.io/) and one of the associated SDKs. Otherwise, feel free to clone this repository or download a zip from the releases.\n\n# Version 1 and 2 Data\n\nVersion 1 data is no longer being maintained. The API for V1 will continue to receive new sets until August 1st, 2021. At this time, V1 of the API will be taken offline, and you MUST be using V2. You have a 6 month window to migrate to V2.\n\nIf you rely on the V1 data, I have provided a `v2_to_v1.rb` Ruby script that you can run to generate all the json files in v1 format.\n\nTo install Ruby: https://www.ruby-lang.org/en/documentation/installation/\n\nYou will also need the `json` gem: `gem install json`.\n\nFinally, to run the script:\n\n```\nruby v2_to_v1.rb\n```\n\nThis will output all of the card data into `/cards/en/v1`.\n\n# Contributing\n\nPlease contribute when you see missing and/or incorrect data. I'll try to review all pull requests relatively quickly so that I can push updates at night.\n\n1. Fork it ( https://github.com/[my-github-username]/pokemon-tcg-data/fork )\n2. Create your feature branch (git checkout -b my-new-feature)\n3. Commit your changes (git commit -am 'Add some feature')\n4. Push to the branch (git push origin my-new-feature)\n5. Create a new Pull Request\n",
+    "tokens": 578,
+    "stars": 538,
+    "forks": 229,
+    "watchers": 30,
+    "open_issues": 91
+}
