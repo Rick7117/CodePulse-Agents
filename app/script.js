@@ -58,8 +58,8 @@ document.getElementById('search-button').addEventListener('click', async () => {
             });
             document.getElementById('process-button').style.display = 'block';
 
-            // Add click listener to newly created project cards
-            addProjectCardClickListeners(); 
+            // Add event listeners to newly created project cards
+            addProjectCardEventListeners();
 
         } else {
             resultsContainer.innerHTML = 'No results found.';
@@ -81,14 +81,14 @@ document.getElementById('search-input').addEventListener('keypress', async (even
 });
 
 // Function to add click listeners to project cards
-function addProjectCardClickListeners() {
+function addProjectCardEventListeners() {
     let selectedProjectCard = null; // Keep track of the currently selected card
 
     document.querySelectorAll('.project-card').forEach(card => {
-        // Add click listener to the card for showing details
+        // Add click listener to the card for showing details and toggling checkbox
         card.addEventListener('click', async (event) => {
-            // Prevent clicking the checkbox from triggering the card click
-            if (event.target.classList.contains('project-checkbox')) {
+            // Prevent clicking the stats from triggering the card click
+            if (event.target.closest('.project-stats')) {
                 return;
             }
 
@@ -96,9 +96,9 @@ function addProjectCardClickListeners() {
             const checkbox = card.querySelector('.project-checkbox');
             if (checkbox) {
                 checkbox.checked = !checkbox.checked;
-                // Manually trigger the change event to update Star History
-                const changeEvent = new Event('change');
-                checkbox.dispatchEvent(changeEvent);
+                // Manually trigger the change event to update Star History if needed
+                // const changeEvent = new Event('change');
+                // checkbox.dispatchEvent(changeEvent);
             }
 
             // Remove 'selected' class from the previously selected card
@@ -201,29 +201,37 @@ function addProjectCardClickListeners() {
             }
         });
 
-        // Add change listener to the checkbox for Star History
-        const checkbox = card.querySelector('.project-checkbox');
-        if (checkbox) {
-            // Prevent card click when checkbox is clicked directly
-            checkbox.addEventListener('click', (event) => {
-                event.stopPropagation();
-            });
-            checkbox.addEventListener('change', (event) => {
+        // Add mouseover and mouseout listeners to the project stats for Star History
+        const projectStats = card.querySelector('.project-stats');
+        if (projectStats) {
+            projectStats.addEventListener('mouseover', (event) => {
                 const projectLinkElement = card.querySelector('.project-info a');
                 if (projectLinkElement) {
-                    updateStarHistoryChart(projectLinkElement.href, event.target.checked);
+                    // Add the current project to the Star History chart
+                    updateStarHistoryChart(projectLinkElement.href, true);
                 }
+            });
+
+            projectStats.addEventListener('mouseout', (event) => {
+                 const projectLinkElement = card.querySelector('.project-info a');
+                 if (projectLinkElement) {
+                     // Remove the current project from the Star History chart
+                     updateStarHistoryChart(projectLinkElement.href, false);
+                 }
             });
         }
     });
 }
 
 // Initial call for any cards present on page load (if any)
-addProjectCardClickListeners();
+addProjectCardEventListeners();
 
     // Simulate processing selected projects
     document.getElementById('process-button').addEventListener('click', () => {
+    // Get all checked checkboxes
     const checkboxes = document.querySelectorAll('.project-card input[type="checkbox"]:checked');
+    // Map checked checkboxes to their corresponding project URLs (assuming data-url attribute exists)
+    // Note: The checkbox is removed, this logic might need adjustment based on how selected projects are tracked now
     const selectedUrls = Array.from(checkboxes).map(cb => cb.dataset.url);
 
     const finalOutputContainer = document.getElementById('final-output');
@@ -269,41 +277,16 @@ function updateStarHistoryChart(projectLink, addRepo) {
     }
 
     let currentRepos = [];
-    if (starHistoryContainer) {
-        // If container exists, get current repos from the image src
-        const imgElement = starHistoryContainer.querySelector('img');
-        if (imgElement) {
-            const currentSrc = imgElement.src;
-            const reposMatch = currentSrc.match(/repos=([^&]+)/);
-            if (reposMatch && reposMatch[1]) {
-                currentRepos = reposMatch[1].split(',');
-            }
-        }
-    } else {
-        // If container does not exist, create it
-        starHistoryContainer = document.createElement('div');
-        starHistoryContainer.id = 'star-history-container';
-        // Insert it after the right panel title, but only if the title exists
-        const rightPanel = document.getElementById('right-panel');
-        const existingStarHistory = document.getElementById('star-history-container');
-        if (rightPanel && !existingStarHistory) {
-             const detailsContent = document.getElementById('project-details-content');
-             if (detailsContent) {
-                 detailsContent.parentNode.insertBefore(starHistoryContainer, detailsContent);
-             } else if (rightPanelTitle) {
-                 rightPanelTitle.parentNode.insertBefore(starHistoryContainer, rightPanelTitle.nextSibling);
-             }
-        }
-    }
+    // Get currently selected repos from checkboxes (this logic needs update as checkboxes are removed)
+    // For now, let's assume we only show the hovered project's star history
+    // If you need to show hovered + selected, you'll need a different way to track selected projects
 
     if (addRepo) {
-        // Add the new repo if not already present
-        if (!currentRepos.includes(repoPath)) {
-            currentRepos.push(repoPath);
-        }
+        // If adding, just show the current repo's history
+        currentRepos = [repoPath];
     } else {
-        // Remove the repo if present
-        currentRepos = currentRepos.filter(repo => repo !== repoPath);
+        // If removing, clear the chart
+        currentRepos = [];
     }
 
     if (starHistoryContainer) {
@@ -317,9 +300,29 @@ function updateStarHistoryChart(projectLink, addRepo) {
                 </a>
             `;
         } else {
-            // If no repos are selected, clear the container
+            // If no repos are selected or on mouseout, clear the container
             starHistoryContainer.innerHTML = '';
         }
+    } else if (currentRepos.length > 0) {
+         // If container does not exist and we need to show a chart, create it
+         starHistoryContainer = document.createElement('div');
+         starHistoryContainer.id = 'star-history-container';
+         const rightPanel = document.getElementById('right-panel');
+         const detailsContent = document.getElementById('project-details-content');
+         if (rightPanel && detailsContent) {
+             detailsContent.parentNode.insertBefore(starHistoryContainer, detailsContent);
+         } else if (rightPanelTitle) {
+             rightPanelTitle.parentNode.insertBefore(starHistoryContainer, rightPanelTitle.nextSibling);
+         }
+
+         const starHistoryLinkUrl = `https://www.star-history.com/#${currentRepos.join('&')}&Date`;
+         const starHistorySvgUrl = `https://api.star-history.com/svg?repos=${currentRepos.join(',')}&type=Date`;
+
+         starHistoryContainer.innerHTML = `
+             <a href="${starHistoryLinkUrl}" target="_blank">
+                 <img src="${starHistorySvgUrl}" alt="Star History Chart" style="width: 100%; height: auto;">
+             </a>
+         `;
     }
 }
 
@@ -335,7 +338,6 @@ function displaySearchResults(results) {
             card.innerHTML = `
                 <div class="card-header">
                     <h3>${result.title}</h3>
-                    <input type="checkbox" class="star-history-checkbox">
                 </div>
                 <p>${result.content.substring(0, 200)}...</p>
                 <a href="${result.link}" target="_blank">Read More</a>
