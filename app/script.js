@@ -386,6 +386,15 @@ function displaySearchResults(results) {
 // console.log('Before DOMContentLoaded listener');
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOMContentLoaded event fired');
+
+    // Configure marked.js to use highlight.js for code highlighting
+    marked.setOptions({
+        highlight: function(code, lang) {
+            const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+            return hljs.highlight(code, { language }).value;
+        }
+    });
+
     const resizer = document.getElementById('resizer');
     const leftPanel = document.querySelector('.left-panel');
     const rightPanel = document.querySelector('.right-panel');

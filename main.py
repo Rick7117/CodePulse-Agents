@@ -153,20 +153,20 @@ def search_projects():
     error_message = None
 
     ### 测试前端可以注释这段模型调用 ---
-    # load_dotenv()
-    # API_KEY = os.getenv("API_KEY")
-    # BASE_URL = os.getenv("BASE_URL")
-    # MODEL = os.getenv("MODEL")
-    # no_proxy_transport = httpx.HTTPTransport()
-    # client_no_proxy = OpenAI(
-    #     api_key=API_KEY,
-    #     base_url=BASE_URL,
-    #     http_client=httpx.Client(transport=no_proxy_transport)
-    # )
+    load_dotenv()
+    API_KEY = os.getenv("API_KEY")
+    BASE_URL = os.getenv("BASE_URL")
+    MODEL = os.getenv("MODEL")
+    no_proxy_transport = httpx.HTTPTransport()
+    client_no_proxy = OpenAI(
+        api_key=API_KEY,
+        base_url=BASE_URL,
+        http_client=httpx.Client(transport=no_proxy_transport)
+    )
 
-    # messages=[{"role": "user", "content": f"帮我寻找一些和{query}相关的github项目"}]
-    # response = chat_base(messages=messages, client=client_no_proxy, model=MODEL)
-    # ### 
+    messages=[{"role": "user", "content": f"帮我寻找一些和{query}相关的github项目"}]
+    response = chat_base(messages=messages, client=client_no_proxy, model=MODEL)
+    ### 
 
     auto_search_dir_path = f'./auto_search/{query}'
     all_projects = []
