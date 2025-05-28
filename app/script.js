@@ -2,8 +2,12 @@ document.getElementById('search-button').addEventListener('click', async () => {
     const query = document.getElementById('search-input').value;
     if (!query) return;
 
+    // 将搜索图标更改为省略号图标
+    const searchButton = document.getElementById('search-button');
+    searchButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16"><path d="M8 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM1.5 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm13 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"></path></svg>';
+
     const resultsContainer = document.getElementById('results-container');
-    resultsContainer.innerHTML = 'Searching...';
+    // resultsContainer.innerHTML = 'Searching...';
     document.getElementById('process-button').style.display = 'none';
     document.getElementById('final-output').innerHTML = '';
     
@@ -36,6 +40,9 @@ document.getElementById('search-button').addEventListener('click', async () => {
         const results = data.results || []; // Ensure results is an array
 
         resultsContainer.innerHTML = ''; // Clear 'Searching...'
+        
+        // 搜索完成后，将图标变回搜索图标
+        searchButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16"><path d="M10.68 11.74a6 6 0 0 1-7.922-8.982 6 6 0 0 1 8.982 7.922l3.04 3.04a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215ZM11.5 7a4.499 4.499 0 1 0-8.997 0A4.499 4.499 0 0 0 11.5 7Z"></path></svg>';
         if (results.length > 0) {
             results.forEach(project => {
                 const card = document.createElement('div');
@@ -80,6 +87,9 @@ document.getElementById('search-button').addEventListener('click', async () => {
         // Display a more specific error message if available, otherwise use a generic one.
         resultsContainer.innerHTML = `Error searching projects: ${error.message || 'An unknown error occurred.'}`;
         console.error('Search error:', error);
+        
+        // 发生错误时也将图标变回搜索图标
+        searchButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16"><path d="M10.68 11.74a6 6 0 0 1-7.922-8.982 6 6 0 0 1 8.982 7.922l3.04 3.04a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215ZM11.5 7a4.499 4.499 0 1 0-8.997 0A4.499 4.499 0 0 0 11.5 7Z"></path></svg>';
     }
 });
 
