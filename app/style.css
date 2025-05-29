@@ -27,7 +27,7 @@ body {
 }
 
 .left-panel {
-    flex: 1; /* 默认占比 */
+    flex: 0.382; /* 左侧占比38.2% (黄金比例) */
     overflow-y: auto; /* Add scrollbar if content overflows */
     padding: 20px;
     background-color: #fff;
@@ -35,7 +35,7 @@ body {
 }
 
 .right-panel {
-    flex: 1; /* 默认占比 */
+    flex: 0.618; /* 右侧占比61.8% (黄金比例) */
     overflow-y: auto; /* Add scrollbar if content overflows */
     padding: 20px;
     background-color: #fff; /* Different background for distinction */
@@ -56,6 +56,8 @@ h1 {
     text-align: center;
     color: #333;
     margin-top: 0;
+    font-size: 2.5rem;
+    font-weight: bold;
 }
 
 .search-box {

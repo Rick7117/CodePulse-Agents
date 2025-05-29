@@ -7,18 +7,18 @@ document.getElementById('search-button').addEventListener('click', async () => {
     searchButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16"><path d="M8 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM1.5 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm13 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"></path></svg>';
 
     const resultsContainer = document.getElementById('results-container');
-    // resultsContainer.innerHTML = 'Searching...';
+    resultsContainer.innerHTML = ''; // 清空左侧卡片
     document.getElementById('process-button').style.display = 'none';
     document.getElementById('final-output').innerHTML = '';
     
     // 重置右侧面板标题和内容
     const detailsTitle = document.getElementById('project-details-title');
     if (detailsTitle) {
-        detailsTitle.textContent = '项目详情';
+        detailsTitle.textContent = 'Details';
     }
     const detailsContent = document.getElementById('project-details-content');
     if (detailsContent) {
-        detailsContent.innerHTML = '请选择一个项目查看详情。';
+        detailsContent.innerHTML = 'Please select a project to view details.';
     }
 
     try {
@@ -38,8 +38,6 @@ document.getElementById('search-button').addEventListener('click', async () => {
 
         const data = await response.json();
         const results = data.results || []; // Ensure results is an array
-
-        resultsContainer.innerHTML = ''; // Clear 'Searching...'
         
         // 搜索完成后，将图标变回搜索图标
         searchButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16"><path d="M10.68 11.74a6 6 0 0 1-7.922-8.982 6 6 0 0 1 8.982 7.922l3.04 3.04a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215ZM11.5 7a4.499 4.499 0 1 0-8.997 0A4.499 4.499 0 0 0 11.5 7Z"></path></svg>';
@@ -52,9 +50,9 @@ document.getElementById('search-button').addEventListener('click', async () => {
             <div class="project-details-wrapper"> <!-- New wrapper div -->
                 <div class="project-info-about-wrapper"> <!-- New wrapper for info and about -->
                     <div class="project-info">
-                        <h3><a href="${project.link}" target="_blank">${project.title || 'No title available'}</a></h3>
+                        <h3><a href="${project.url}" target="_blank">${project.repo_name || 'No title available'}</a></h3>
                     </div>
-                    <div class="project-about">${project.about || 'No descirption'}</div>
+                    <div class="project-about">${project.description || 'No descirption'}</div>
                 </div>
                 <div class="project-stats">
                     <p>
@@ -163,7 +161,7 @@ function addProjectCardEventListeners() {
                 loadingDiv.className = 'loading-indicator';
                 loadingDiv.innerHTML = `
                     <div class="spinner"></div>
-                    <p>正在总结...</p>
+                    <p>Summarizing...</p>
                 `;
                 detailsContent.appendChild(loadingDiv);
 
@@ -174,7 +172,7 @@ function addProjectCardEventListeners() {
                         headers: {
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({ id: projectTitle, query: currentQuery }) // Include query in the body
+                        body: JSON.stringify({ repo_name: projectTitle, query: currentQuery }) // Include query in the body
                     });
 
                     if (!response.ok) {
@@ -191,13 +189,9 @@ function addProjectCardEventListeners() {
 
                     const projectDetails = await response.json();
 
-                    // Update the details panel with fetched data
-                    // Use marked.js to parse Markdown content to HTML
-                    const htmlContent = marked.parse(projectDetails.content || 'No content available'); // Parse Markdown
-
                     // Generate language bar and legend
                     let languageHtml = '';
-                    const languages = projectDetails.language; // Get language data
+                    const languages = projectDetails.languages; // Get language data
                     console.log('Languages data:', languages);
                     if (languages && Object.keys(languages).length > 0) {
                         languageHtml += '<div class="language-container">';
@@ -208,33 +202,172 @@ function addProjectCardEventListeners() {
                         const sortedLanguages = Object.entries(languages)
                             .map(([lang, bytes]) => [lang, (bytes / totalBytes) * 100]) // Calculate percentage
                             .sort(([, a], [, b]) => b - a);
-                        sortedLanguages.forEach(([lang, percentage]) => {
-                            // Assign a color (simple example, could use a color map)
-                            // Re-calculate color based on language name or a fixed map for consistency
-                            // For simplicity, let's use a basic index-based color for this example, assuming order is stable
-                            const index = sortedLanguages.findIndex(([l, p]) => l === lang && p === percentage);
-                            const consistentColor = `hsl(${(index * 100) % 360}, 70%, 50%)`;
+                        // GitHub-like color palette (avoiding bright red and green)
+                        const githubColors = [
+                            '#3178c6', // TypeScript blue
+                            '#f1e05a', // JavaScript yellow
+                            '#e34c26', // HTML orange
+                            '#563d7c', // CSS purple
+                            '#384d54', // Docker blue-gray
+                            '#89e051', // Shell green (muted)
+                            '#701516', // Ruby dark red (muted)
+                            '#b07219', // Java brown
+                            '#2b7489', // Python blue
+                            '#00ADD8', // Go cyan
+                            '#512BD4', // C# purple
+                            '#A97BFF', // Kotlin purple
+                            '#DA5B0B', // Rust orange
+                            '#4F5D95'  // PHP blue
+                        ];
+                        sortedLanguages.forEach(([lang, percentage], index) => {
+                            const colorIndex = index % githubColors.length;
+                            const consistentColor = githubColors[colorIndex];
                             languageHtml += `<div class="language-segment" style="width: ${percentage}%; background-color: ${consistentColor};" title="${lang}: ${percentage.toFixed(2)}%"></div>`;
                         });
                         languageHtml += '</div>'; // .language-bar
                         languageHtml += '<div class="language-legend">';
-                        sortedLanguages.forEach(([lang, percentage]) => {
-                             // Use the same consistent color calculation as for the bar segments
-                             const index = sortedLanguages.findIndex(([l, p]) => l === lang && p === percentage);
-                             const consistentColor = `hsl(${(index * 100) % 360}, 70%, 50%)`;
+                        sortedLanguages.forEach(([lang, percentage], index) => {
+                             const colorIndex = index % githubColors.length;
+                             const consistentColor = githubColors[colorIndex];
                              languageHtml += `<span class="legend-item"><span class="legend-color" style="background-color: ${consistentColor};"></span>${lang} ${percentage.toFixed(2)}%</span>`;
                         });
                         languageHtml += '</div>'; // .language-legend
                         languageHtml += '</div>'; // .language-container
                     }
 
-                    detailsContent.innerHTML = `
-                        ${languageHtml} <!-- Add language visualization -->
-                        <hr>
-                        <p>${htmlContent}</p> <!-- Use parsed HTML content -->`;
+                    // Generate project basic info section
+                    const basicInfoHtml = `
+                        <div class="project-basic-info">
+                            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                                <span style="display: flex; align-items: center; gap: 6px;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16"><path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Zm0 2.445L6.615 5.5a.75.75 0 0 1-.564.41l-3.097.45 2.24 2.184a.75.75 0 0 1 .216.664l-.528 3.084 2.769-1.456a.75.75 0 0 1 .698 0l2.77 1.456-.53-3.084a.75.75 0 0 1 .216-.664l2.24-2.183-3.096-.45a.75.75 0 0 1-.564-.41L8 2.694Z"></path></svg> <strong>Stars</strong> ${projectDetails.stars || 0}
+                                </span>
+                                <span style="display: flex; align-items: center; gap: 6px;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16"><path d="M5 5.372v.878c0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75v-.878a2.25 2.25 0 1 1 1.5 0v.878a2.25 2.25 0 0 1-2.25 2.25h-1.5v2.128a2.251 2.251 0 1 1-1.5 0V8.5h-1.5A2.25 2.25 0 0 1 3.5 6.25v-.878a2.25 2.25 0 1 1 1.5 0ZM5 3.25a.75.75 0 1 0-1.5 0 .75.75 0 0 0 1.5 0Zm6.75.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm-3 8.75a.75.75 0 1 0-1.5 0 .75.75 0 0 0 1.5 0Z"></path></svg> <strong>Forks</strong> ${projectDetails.forks || 0}
+                                </span>
+                                <span style="display: flex; align-items: center; gap: 6px;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16"><path d="M8 2c1.981 0 3.671.992 4.933 2.078 1.27 1.091 2.187 2.345 2.637 3.023a1.62 1.62 0 0 1 0 1.798c-.45.678-1.367 1.932-2.637 3.023C11.67 13.008 9.981 14 8 14c-1.981 0-3.671-.992-4.933-2.078C1.797 10.83.88 9.576.43 8.898a1.62 1.62 0 0 1 0-1.798c.45-.677 1.367-1.931 2.637-3.022C4.33 2.992 6.019 2 8 2ZM1.679 7.932a.12.12 0 0 0 0 .136c.411.622 1.241 1.75 2.366 2.717C5.176 11.758 6.527 12.5 8 12.5c1.473 0 2.825-.742 3.955-1.715 1.124-.967 1.954-2.096 2.366-2.717a.12.12 0 0 0 0-.136c-.412-.621-1.242-1.75-2.366-2.717C10.824 4.242 9.473 3.5 8 3.5c-1.473 0-2.825.742-3.955 1.715-1.124.967-1.954 2.096-2.366 2.717ZM8 10a2 2 0 1 1-.001-3.999A2 2 0 0 1 8 10Z"></path></svg> <strong>Watchers</strong> ${projectDetails.watchers || 0}
+                                </span>
+                                <span style="display: flex; align-items: center; gap: 6px;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16"><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Zm7.25-3.25v2.5h2.5a.75.75 0 0 1 0 1.5h-2.5v2.5a.75.75 0 0 1-1.5 0v-2.5h-2.5a.75.75 0 0 1 0-1.5h2.5v-2.5a.75.75 0 0 1 1.5 0Z"></path></svg> <strong>Created</strong> ${new Date(projectDetails.created_at).toLocaleDateString()}
+                                </span>
+                                <span style="display: flex; align-items: center; gap: 6px;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16"><path d="M11.93 8.5a4.002 4.002 0 0 1-7.86 0H.75a.75.75 0 0 1 0-1.5h3.32a4.002 4.002 0 0 1 7.86 0h3.32a.75.75 0 0 1 0 1.5Zm-1.43-.75a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0Z"></path></svg> <strong>Last Commit</strong> ${new Date(projectDetails.last_commit).toLocaleDateString()}
+                                </span>
+                            </div>
+                            <div class="info-row" style="margin-top: 20px; display: flex; align-items: center; gap: 8px;">
+                                <span class="info-label" style="display: flex; align-items: center; gap: 6px;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16"><path d="M0 1.75A.75.75 0 0 1 .75 1h4.253c1.227 0 2.317.59 3 1.501A3.743 3.743 0 0 1 11.006 1h4.245a.75.75 0 0 1 .75.75v10.5a.75.75 0 0 1-.75.75h-4.507a2.25 2.25 0 0 0-1.591.659l-.622.621a.75.75 0 0 1-1.06 0l-.622-.621A2.25 2.25 0 0 0 5.258 13H.75a.75.75 0 0 1-.75-.75Zm7.251 10.324.004-5.073-.002-2.253A2.25 2.25 0 0 0 5.003 2.5H1.5v9h3.757a3.75 3.75 0 0 1 1.994.574ZM8.755 4.75l-.004 7.322a3.752 3.752 0 0 1 1.992-.572H14.5v-9h-3.495a2.25 2.25 0 0 0-2.25 2.25Z"></path></svg> <strong>Description:</strong>
+                                </span>
+                                <span class="info-value">${projectDetails.description || 'No description available'}</span>
+                            </div>
+                        </div>
+                    `;
 
-                     // Insert languageHtml after the title
-                     // const rightPanelTitle = document.querySelector('#right-panel h2');
+                    // Generate analysis result section
+                    let analysisHtml = '';
+                    if (projectDetails.analysis_result) {
+                        const analysis = projectDetails.analysis_result;
+                        analysisHtml = `
+                            <div class="analysis-section">
+                                <h3><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" style="vertical-align: middle; margin-right: 8px;"><path d="M5.75 7.5a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5a.75.75 0 0 1 .75-.75Zm5.25.75a.75.75 0 0 0-1.5 0v1.5a.75.75 0 0 0 1.5 0v-1.5Z"></path><path d="M6.25 0h2A.75.75 0 0 1 9 .75V3.5h3.25a2.25 2.25 0 0 1 2.25 2.25V8h.75a.75.75 0 0 1 0 1.5h-.75v2.75a2.25 2.25 0 0 1-2.25 2.25h-8.5a2.25 2.25 0 0 1-2.25-2.25V9.5H.75a.75.75 0 0 1 0-1.5h.75V5.75A2.25 2.25 0 0 1 3.75 3.5H7.5v-2H6.25a.75.75 0 0 1 0-1.5ZM3 5.75v6.5c0 .414.336.75.75.75h8.5a.75.75 0 0 0 .75-.75v-6.5a.75.75 0 0 0-.75-.75h-8.5a.75.75 0 0 0-.75.75Z"></path></svg>项目分析</h3>
+                                <div class="analysis-grid" style="display: flex; flex-wrap: wrap; gap: 20px;">
+                                    <div class="analysis-item">
+                                        <span class="analysis-label"><strong>活跃度评分:</strong></span>
+                                        <span class="analysis-score">${analysis.activity_score}/10</span>
+                                    </div>
+                                    <div class="analysis-item">
+                                        <span class="analysis-label"><strong>代码质量评分:</strong></span>
+                                        <span class="analysis-score">${analysis.code_quality_score}/10</span>
+                                    </div>
+                                    <div class="analysis-item">
+                                        <span class="analysis-label"><strong>复杂度等级:</strong></span>
+                                        <span class="analysis-value">${analysis.complexity_level}</span>
+                                    </div>
+                                    <div class="analysis-item">
+                                        <span class="analysis-label"><strong>维护状态:</strong></span>
+                                        <span class="analysis-value">${analysis.maintenance_status}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    // Generate category result section
+                    let categoryHtml = '';
+                    if (projectDetails.category_result) {
+                        const category = projectDetails.category_result;
+                        categoryHtml = `
+                            <div class="category-section">
+                                <h3><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" style="vertical-align: middle; margin-right: 8px;"><path d="M1 7.775V2.75C1 1.784 1.784 1 2.75 1h5.025c.464 0 .91.184 1.238.513l6.25 6.25a1.75 1.75 0 0 1 0 2.474l-5.026 5.026a1.75 1.75 0 0 1-2.474 0l-6.25-6.25A1.752 1.752 0 0 1 1 7.775Zm1.5 0c0 .066.026.13.073.177l6.25 6.25a.25.25 0 0 0 .354 0l5.025-5.025a.25.25 0 0 0 0-.354l-6.25-6.25a.25.25 0 0 0-.177-.073H2.75a.25.25 0 0 0-.25.25ZM6 5a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"></path></svg>项目分类</h3>
+                                <div class="category-content" style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start;">
+                                    <div class="category-item">
+                                        <span class="category-label"><strong>主要分类:</strong></span>
+                                        <span class="primary-category">${category.primary_category}</span>
+                                    </div>
+                                    ${category.secondary_categories && category.secondary_categories.length > 0 ? `
+                                        <div class="category-item">
+                                            <div style="display: flex; align-items: center; gap: 8px;">
+                                                <span class="category-label"><strong>次要分类:</strong></span>
+                                                <div class="secondary-categories" style="display: flex; flex-wrap: nowrap; gap: 8px; overflow-x: auto;">
+                                                    ${category.secondary_categories.map(cat => `<span class="category-tag">${cat}</span>`).join('')}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                    ${category.tags && category.tags.length > 0 ? `
+                                        <div class="category-item">
+                                            <span class="category-label">
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" style="vertical-align: middle; margin-right: 4px;"><path d="M7.22 6.5a.72.72 0 1 1-1.44 0 .72.72 0 0 1 1.44 0Z"></path><path d="M8 16A8 8 0 1 1 8 0a8 8 0 0 1 0 16ZM4 5v3.38c.001.397.159.778.44 1.059l3.211 3.213a1.202 1.202 0 0 0 1.698 0l3.303-3.303a1.202 1.202 0 0 0 0-1.698L9.439 4.44A1.5 1.5 0 0 0 8.379 4H5a1 1 0 0 0-1 1Z"></path></svg>
+                                                <strong>标签:</strong>
+                                            </span>
+                                            <div class="tags" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px;">
+                                                ${category.tags.map(tag => `<span class="tag" style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa; font-size: 12px;">${tag}</span>`).join('')}
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    // Generate report result section
+                    let reportHtml = '';
+                    if (projectDetails.report_result) {
+                        const report = projectDetails.report_result;
+                        reportHtml = `
+                            <div class="report-section">
+                                <h3><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" style="vertical-align: middle; margin-right: 8px;"><path d="M4.75 7a.75.75 0 0 0 0 1.5h4.5a.75.75 0 0 0 0-1.5h-4.5ZM5 4.75A.75.75 0 0 1 5.75 4h5.5a.75.75 0 0 1 0 1.5h-5.5A.75.75 0 0 1 5 4.75ZM6.75 10a.75.75 0 0 0 0 1.5h4.5a.75.75 0 0 0 0-1.5h-4.5Z"></path><path d="M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v12.5A1.75 1.75 0 0 1 14.25 16H1.75A1.75 1.75 0 0 1 0 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25V1.75a.25.25 0 0 0-.25-.25Z"></path></svg>AI 分析报告</h3>
+                                <div class="report-content">
+                                    <div class="rating">
+                                        <span class="rating-label"><strong>推荐评级:</strong></span>
+                                        <span class="rating-stars">${(() => {
+                                            const starCount = (report.rating.match(/⭐️/g) || []).length;
+                                            const filledStar = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" style="margin-right: 2px;"><path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"></path></svg>';
+                                            const emptyStar = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" style="margin-right: 2px;"><path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Zm0 2.445L6.615 5.5a.75.75 0 0 1-.564.41l-3.097.45 2.24 2.184a.75.75 0 0 1 .216.664l-.528 3.084 2.769-1.456a.75.75 0 0 1 .698 0l2.77 1.456-.53-3.084a.75.75 0 0 1 .216-.664l2.24-2.183-3.096-.45a.75.75 0 0 1-.564-.41L8 2.694Z"></path></svg>';
+                                            return filledStar.repeat(starCount) + emptyStar.repeat(5 - starCount);
+                                        })()}</span>
+                                    </div>
+                                    <div class="summary">
+                                        <h4>项目总结</h4>
+                                        <p>${report.summary}</p>
+                                    </div>
+                                    <div class="recommendation">
+                                        <h4>推荐理由</h4>
+                                        <p>${report.recommendation_reason}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    detailsContent.innerHTML = `
+                        ${basicInfoHtml}
+                        ${languageHtml ? '<hr class="section-divider">' + languageHtml : ''}
+                        ${analysisHtml ? '<hr class="section-divider">' + analysisHtml : ''}
+                        ${categoryHtml ? '<hr class="section-divider">' + categoryHtml : ''}
+                        ${reportHtml ? '<hr class="section-divider">' + reportHtml : ''}
+                    `;
                 } catch (error) {
                     detailsContent.innerHTML = `Error loading project details: ${error.message || 'An unknown error occurred.'}`;
                     console.error('Project details fetch error:', error);
