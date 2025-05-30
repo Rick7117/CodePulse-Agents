@@ -11,14 +11,14 @@ document.getElementById('search-button').addEventListener('click', async () => {
     document.getElementById('process-button').style.display = 'none';
     document.getElementById('final-output').innerHTML = '';
     
-    // 重置右侧面板标题和内容
+    // 隐藏右侧面板标题和内容
     const detailsTitle = document.getElementById('project-details-title');
     if (detailsTitle) {
-        detailsTitle.textContent = 'Details';
+        detailsTitle.style.display = 'none';
     }
     const detailsContent = document.getElementById('project-details-content');
     if (detailsContent) {
-        detailsContent.innerHTML = 'Please select a project to view details.';
+        detailsContent.style.display = 'none';
     }
 
     try {
@@ -42,6 +42,18 @@ document.getElementById('search-button').addEventListener('click', async () => {
         // 搜索完成后，将图标变回搜索图标
         searchButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16"><path d="M10.68 11.74a6 6 0 0 1-7.922-8.982 6 6 0 0 1 8.982 7.922l3.04 3.04a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215ZM11.5 7a4.499 4.499 0 1 0-8.997 0A4.499 4.499 0 0 0 11.5 7Z"></path></svg>';
         if (results.length > 0) {
+            // 显示右侧面板的标题和内容
+            const detailsTitle = document.getElementById('project-details-title');
+            const detailsContent = document.getElementById('project-details-content');
+            if (detailsTitle) {
+                detailsTitle.style.display = 'block';
+                detailsTitle.textContent = 'Details';
+            }
+            if (detailsContent) {
+                detailsContent.style.display = 'block';
+                detailsContent.innerHTML = 'Please select a project to view details.';
+            }
+            
             results.forEach(project => {
                 const card = document.createElement('div');
                 card.classList.add('project-card');
@@ -322,7 +334,7 @@ function addProjectCardEventListeners() {
                                                 <strong>标签:</strong>
                                             </span>
                                             <div class="tags" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px;">
-                                                ${category.tags.map(tag => `<span class="tag" style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa; font-size: 12px;">${tag}</span>`).join('')}
+                                                ${category.tags.map(tag => `<span class="tag" style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; background-color: #1976d2; color: white; font-weight: bold; font-size: 12px;">${tag}</span>`).join('')}
                                             </div>
                                         </div>
                                     ` : ''}
@@ -363,7 +375,7 @@ function addProjectCardEventListeners() {
 
                     detailsContent.innerHTML = `
                         ${basicInfoHtml}
-                        ${languageHtml ? '<hr class="section-divider">' + languageHtml : ''}
+                        ${languageHtml}
                         ${analysisHtml ? '<hr class="section-divider">' + analysisHtml : ''}
                         ${categoryHtml ? '<hr class="section-divider">' + categoryHtml : ''}
                         ${reportHtml ? '<hr class="section-divider">' + reportHtml : ''}
@@ -410,24 +422,92 @@ function addProjectCardEventListeners() {
 // Initial call for any cards present on page load (if any)
 addProjectCardEventListeners();
 
-    // Simulate processing selected projects
-    document.getElementById('process-button').addEventListener('click', () => {
-    // Get all checked checkboxes
-    const checkboxes = document.querySelectorAll('.project-card input[type="checkbox"]:checked');
-    // Map checked checkboxes to their corresponding project URLs (assuming data-url attribute exists)
-    // Note: The checkbox is removed, this logic might need adjustment based on how selected projects are tracked now
-    const selectedUrls = Array.from(checkboxes).map(cb => cb.dataset.url);
-
-    const finalOutputContainer = document.getElementById('final-output');
-    if (selectedUrls.length > 0) {
-        // In a real application, you would send selectedUrls to the backend
-        // for further processing (e.g., integrating information).
-        // For this example, we'll just display the selected URLs.
-        finalOutputContainer.innerHTML = '<h3>Selected Projects:</h3>' + selectedUrls.map(url => `<p>${url}</p>`).join('');
-    } else {
-        finalOutputContainer.innerHTML = 'No projects selected.';
-    }
-});
+    // Build Report functionality
+    document.getElementById('process-button').addEventListener('click', async () => {
+        // Get all checked checkboxes
+        const checkboxes = document.querySelectorAll('.project-card input[type="checkbox"]:checked');
+        
+        const finalOutputContainer = document.getElementById('final-output');
+        
+        if (checkboxes.length === 0) {
+            finalOutputContainer.innerHTML = 'No projects selected.';
+            finalOutputContainer.style.display = 'block';
+            return;
+        }
+        
+        // Get current search query
+        const currentQuery = document.getElementById('search-input').value;
+        if (!currentQuery) {
+            finalOutputContainer.innerHTML = 'Error: No search query found.';
+            finalOutputContainer.style.display = 'block';
+            return;
+        }
+        
+        // Show loading indicator
+        finalOutputContainer.innerHTML = `
+            <div class="loading-indicator">
+                <div class="spinner"></div>
+                <p>Generating report...</p>
+            </div>
+        `;
+        finalOutputContainer.style.display = 'block';
+        
+        try {
+            // Get selected project names
+            const selectedProjects = [];
+            checkboxes.forEach(checkbox => {
+                const card = checkbox.closest('.project-card');
+                const projectTitle = card.querySelector('.project-info h3 a').textContent;
+                selectedProjects.push(projectTitle);
+            });
+            
+            // Call backend to generate report
+            const response = await fetch('/generate_report', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    query: currentQuery,
+                    selected_projects: selectedProjects
+                })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+            }
+            
+            const result = await response.json();
+            
+            // Display success message with download button
+            finalOutputContainer.innerHTML = `
+                <div class="report-success">
+                    <h3>✅ Report Generated Successfully!</h3>
+                    <div class="report-content-row">
+                        <div class="projects-section">
+                            <p><strong>Selected projects:</strong> ${selectedProjects.length}</p>
+                            <div class="selected-projects-list">
+                                ${selectedProjects.map(project => `<span class="project-tag">${project}</span>`).join('')}
+                            </div>
+                        </div>
+                        <div class="download-section">
+                            <button class="download-btn" onclick="downloadReport('${result.report_path}')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16"><path d="M2.75 14A1.75 1.75 0 0 1 1 12.25v-2.5a.75.75 0 0 1 1.5 0v2.5c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25v-2.5a.75.75 0 0 1 1.5 0v2.5A1.75 1.75 0 0 1 13.25 14Z"></path><path d="M7.25 7.689V2a.75.75 0 0 1 1.5 0v5.689l1.97-1.969a.749.749 0 1 1 1.06 1.06l-3.25 3.25a.749.749 0 0 1-1.06 0L4.22 6.78a.749.749 0 1 1 1.06-1.06l1.97 1.969Z"></path></svg> Download</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+        } catch (error) {
+            console.error('Report generation error:', error);
+            finalOutputContainer.innerHTML = `
+                <div class="report-error">
+                    <h3>❌ Report Generation Failed</h3>
+                    <p>Error: ${error.message}</p>
+                </div>
+            `;
+        }
+    });
 
 
 function updateStarHistoryChart(projectLink, addRepo, event) { // Accept event object
@@ -594,3 +674,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+// Download report function
+function downloadReport(reportPath) {
+    // Create a temporary link element
+    const link = document.createElement('a');
+    link.href = reportPath;
+    link.download = reportPath.split('/').pop(); // Extract filename from path
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
