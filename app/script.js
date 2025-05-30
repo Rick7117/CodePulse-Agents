@@ -64,7 +64,7 @@ document.getElementById('search-button').addEventListener('click', async () => {
                     <div class="project-info">
                         <h3><a href="${project.url}" target="_blank">${project.repo_name || 'No title available'}</a></h3>
                     </div>
-                    <div class="project-about">${project.description || 'No descirption'}</div>
+                    <div class="project-about">${(project.description || 'No description').length > 100 ? (project.description || 'No description').substring(0, 100) + '...' : (project.description || 'No description')}</div>
                 </div>
                 <div class="project-stats">
                     <p>
@@ -91,8 +91,6 @@ document.getElementById('search-button').addEventListener('click', async () => {
         } else {
             resultsContainer.innerHTML = 'No results found.';
         }
-
-
     } catch (error) {
         // Display a more specific error message if available, otherwise use a generic one.
         resultsContainer.innerHTML = `Error searching projects: ${error.message || 'An unknown error occurred.'}`;
@@ -677,11 +675,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Download report function
 function downloadReport(reportPath) {
-    // Create a temporary link element
-    const link = document.createElement('a');
-    link.href = reportPath;
-    link.download = reportPath.split('/').pop(); // Extract filename from path
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+        // Extract filename from the full path
+        const filename = reportPath.split('/').pop();
+        // Create download URL using Flask route
+        const downloadUrl = `/download_report/${filename}`;
+        
+        // Create a temporary link element
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } catch (error) {
+        console.error('Download failed:', error);
+        alert('下载失败，请稍后重试');
+    }
 }

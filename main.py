@@ -164,6 +164,32 @@ def generate_report():
             'error': f'Report generation failed: {str(e)}'
         }), 500
 
+@app.route('/download_report/<path:filename>')
+def download_report(filename):
+    """下载报告文件"""
+    try:
+        import os
+        # 确保文件路径安全，防止目录遍历攻击
+        if '..' in filename or filename.startswith('/'):
+            return jsonify({'error': 'Invalid file path'}), 400
+        
+        # 报告文件存储在./report目录下
+        report_dir = './report'
+        file_path = os.path.join(report_dir, filename)
+        print(file_path)
+        # 检查文件是否存在
+        if not os.path.exists(file_path):
+            return jsonify({'error': 'Report file not found'}), 404
+        
+        # 发送文件
+        directory = os.path.dirname(file_path)
+        filename = os.path.basename(file_path)
+        return send_from_directory(directory, filename, as_attachment=True)
+        
+    except Exception as e:
+        print(f"Download error: {e}")
+        return jsonify({'error': f'Download failed: {str(e)}'}), 500
+
 if __name__ == "__main__":
     print("Starting Multi-Agent Flask server...")
     

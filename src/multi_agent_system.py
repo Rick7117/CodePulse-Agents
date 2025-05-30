@@ -267,8 +267,8 @@ class MultiAgentSystem:
             from datetime import datetime
             
             # 创建报告目录
-            safe_query = query.replace('/', '_').replace('\\', '_').replace(':', '_')
-            report_dir = f"./report/{safe_query}"
+            # safe_query = query.replace('/', '_').replace('\\', '_').replace(':', '_')
+            report_dir = f"./report"
             os.makedirs(report_dir, exist_ok=True)
             
             # 生成报告文件名
@@ -288,28 +288,43 @@ class MultiAgentSystem:
             raise e
 
 class SearchAgent:
-    """GitHub搜索专家智能体 - 直接API搜索"""
+    """GitHub搜索专家智能体 - 智能理解查询并搜索"""
     
     def __init__(self, llm=None):
+        self.llm = llm
         self.github_token = os.getenv('GITHUB_TOKEN')
         self.headers = {}
         if self.github_token:
             self.headers['Authorization'] = f'token {self.github_token}'
+        
+        # 加载prompts配置
+        self.prompts = load_prompts().get('search_agent', {})
     
     async def search_projects(self, query: str) -> SearchResult:
-        """直接使用GitHub API搜索项目"""
+        """使用大模型理解查询意图，然后进行GitHub API搜索"""
         try:
-            # 搜索仓库
-            repos = await self._search_repositories(query)
+            # 使用大模型理解查询意图并构建GitHub搜索查询
+            github_query = await self._understand_query_with_llm(query)
+            logger.info(f"原始查询: {query}")
+            logger.info(f"转换后的GitHub查询: {github_query}")
             
-            # 获取详细信息
+            # 搜索仓库
+            repos = await self._search_repositories(github_query)
+            
+            # 获取详细信息并根据原始查询要求进行过滤
             projects = []
-            for repo in repos[:10]:  
+            for repo in repos[:20]:  # 获取更多结果用于过滤
                 project_data = await self._get_project_details(repo)
                 if project_data:
-                    projects.append(project_data)
-                    # 保存项目数据到文件
-                    await self._save_project_data(query, project_data)
+                    # 使用大模型判断项目是否符合原始查询要求
+                    if await self._filter_project_with_llm(query, project_data):
+                        projects.append(project_data)
+                        # 保存项目数据到文件
+                        await self._save_project_data(query, project_data)
+                        
+                        # 限制返回结果数量
+                        if len(projects) >= 10:
+                            break
             
             return SearchResult(
                 projects=projects,
@@ -320,6 +335,76 @@ class SearchAgent:
             logger.error(f"搜索出错: {e}")
             return SearchResult(projects=[], total_count=0, search_query=query)
     
+    async def _understand_query_with_llm(self, query: str) -> str:
+        """使用大模型理解用户查询意图并构建GitHub搜索查询"""
+        try:
+            if not self.llm:
+                # 如果没有LLM，直接返回原查询
+                return query
+            
+            # 从prompts配置中获取模板
+            template = self.prompts.get('query_understanding_template', '')
+            if not template:
+                logger.warning("未找到query_understanding_template，使用默认查询")
+                return query
+            
+            prompt = template.format(query=query)
+            
+            response = await asyncio.to_thread(
+                self.llm.invoke,
+                prompt
+            )
+            
+            github_query = response.content.strip()
+            return github_query
+            
+        except Exception as e:
+            logger.error(f"LLM理解查询失败: {e}")
+            return query  # 失败时返回原查询
+    
+    async def _filter_project_with_llm(self, original_query: str, project_data: Dict[str, Any]) -> bool:
+        """使用大模型判断项目是否符合原始查询要求"""
+        try:
+            if not self.llm:
+                # 如果没有LLM，默认通过
+                return True
+            
+            # 构建项目信息摘要
+            project_summary = f"""
+                项目名称: {project_data.get('repo_name', '')}
+                描述: {project_data.get('description', '')}
+                Star数: {project_data.get('stars', 0)}
+                Fork数: {project_data.get('forks', 0)}
+                主要语言: {', '.join(project_data.get('languages', {}).keys())}
+                最后更新: {project_data.get('last_commit', '')}
+                创建时间: {project_data.get('created_at', '')}
+                主题标签: {', '.join(project_data.get('topics', []))}
+                许可证: {project_data.get('license', '')}
+                """
+            
+            # 从prompts配置中获取模板
+            template = self.prompts.get('project_filtering_template', '')
+            if not template:
+                logger.warning("未找到project_filtering_template，默认通过过滤")
+                return True
+            
+            prompt = template.format(
+                original_query=original_query,
+                project_summary=project_summary
+            )
+            
+            response = await asyncio.to_thread(
+                self.llm.invoke,
+                prompt
+            )
+            
+            result = response.content.strip().lower()
+            return result == "是" or result == "yes" or result == "true"
+            
+        except Exception as e:
+            logger.error(f"LLM过滤项目失败: {e}")
+            return True  # 失败时默认通过
+    
     async def _search_repositories(self, query: str) -> List[Dict[str, Any]]:
         """搜索GitHub仓库"""
         url = 'https://api.github.com/search/repositories'
@@ -327,7 +412,7 @@ class SearchAgent:
             'q': query,
             'sort': 'stars',
             'order': 'desc',
-            'per_page': 20
+            'per_page': 30  # 增加搜索结果数量以便过滤
         }
         
         response = requests.get(url, headers=self.headers, params=params, timeout=10)

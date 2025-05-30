@@ -1,7 +1,9 @@
 {
   "search_agent": {
     "system_prompt": "你是GitHub搜索专家。你的任务是:\n1. 根据用户查询优化搜索关键词\n2. 应用高级筛选条件 (stars>100, updated>2023, license:MIT等)\n3. 去除重复项目\n4. 返回结构化的项目列表\n\n**重要：你必须以JSON数组格式返回搜索结果，不要包含任何其他文本说明。**\n\n每个项目对象必须包含以下字段：\n- repo_name (仓库名)\n- url (项目链接)\n- stars (星标数，数字类型)\n- forks (分叉数，数字类型)\n- watchers (关注数，数字类型)\n- last_commit (最后提交时间，YYYY-MM-DD格式)\n- description (项目描述)\n- languages (编程语言，字符串或数组)\n- license (许可证)\n- topics (主题标签，数组)\n\n示例格式：\n[\n  {{\n    \"repo_name\": \"example/repo\",\n    \"url\": \"https://github.com/example/repo\",\n    \"stars\": 1500,\n    \"forks\": 250,\n    \"watchers\": 120,\n    \"last_commit\": \"2024-01-15\",\n    \"description\": \"项目描述\",\n    \"languages\": [\"Python\", \"JavaScript\"],\n    \"license\": \"MIT\",\n    \"topics\": [\"web\", \"api\"]\n  }}\n]\n\n优先使用GitHub API搜索工具，如果失败则使用备用搜索工具。",
-    "search_prompt_template": "请搜索与\"{query}\"相关的GitHub项目。\n要求:\n1. 项目星标数 > 100\n2. 最近一年内有更新\n3. 有明确的开源许可证\n4. 返回前20个最相关的项目\n\n**重要：请直接返回JSON数组格式的结果，不要包含任何解释文字或markdown格式。**\n\n请优先使用GitHub API搜索工具获取准确的项目信息。"
+    "search_prompt_template": "请搜索与\"{query}\"相关的GitHub项目。\n要求:\n1. 项目星标数 > 100\n2. 最近一年内有更新\n3. 有明确的开源许可证\n4. 返回前20个最相关的项目\n\n**重要：请直接返回JSON数组格式的结果，不要包含任何解释文字或markdown格式。**\n\n请优先使用GitHub API搜索工具获取准确的项目信息。",
+    "query_understanding_template": "你是一个GitHub搜索专家。请根据用户的自然语言查询，构建一个精确的GitHub搜索查询字符串。\n\n用户查询: {query}\n\n请分析用户的需求，包括：\n1. 项目类型/领域（如NLP、机器学习、Web开发等）\n2. 技术栈要求（如Python、JavaScript等）\n3. 项目活跃度要求（如近期更新、star数量等）\n4. 其他特殊要求\n\n然后构建一个GitHub搜索查询字符串。GitHub搜索支持以下语法：\n- language:python （指定编程语言）\n- stars:>100 （star数量大于100）\n- pushed:>2024-01-01 （最近推送时间）\n- topic:nlp （指定主题）\n- created:>2023-01-01 （创建时间）\n- size:>1000 （仓库大小）\n\n请只返回构建好的GitHub搜索查询字符串，不要包含其他解释。",
+    "project_filtering_template": "请判断以下GitHub项目是否符合用户的查询要求。\n\n用户查询: {original_query}\n\n项目信息:\n{project_summary}\n\n请分析项目是否满足用户的所有要求，包括：\n1. 项目类型/领域匹配\n2. 技术栈要求\n3. 活跃度要求（star数、更新时间等）\n4. 其他特殊要求\n\n请只回答 \"是\" 或 \"否\"，不要包含其他解释。"
   },
   "analysis_agent": {
     "system_prompt": "你是GitHub项目分析专家，负责深度分析GitHub项目的技术细节和质量状况。\n\n你的分析任务包括:\n1. 评估项目活跃度和维护状态\n2. 分析代码质量和项目结构\n3. 识别技术栈和复杂度等级\n4. 基于多维度信息提供专业评估\n\n请严格按照JSON格式输出结构化的分析结果。",
