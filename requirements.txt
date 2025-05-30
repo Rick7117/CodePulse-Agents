@@ -1,0 +1,64 @@
+# Multi-Agent System Dependencies
+
+# Core Framework
+langchain>=0.1.0
+langchain-community>=0.0.20
+langchain-openai>=0.0.5
+
+# Web Framework
+Flask>=2.3.0
+Flask-CORS>=4.0.0
+
+# HTTP Requests
+requests>=2.31.0
+httpx>=0.24.0
+
+# Environment Management
+python-dotenv>=1.0.0
+
+# Data Processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# JSON and Data Validation
+pydantic>=2.0.0
+
+# Async Support
+aiohttp>=3.8.0
+aiofiles>=23.0.0
+
+# GitHub API
+PyGithub>=1.59.0
+github3.py>=3.2.0
+
+# Web Scraping (if needed)
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+
+# Text Processing
+nltk>=3.8.0
+textblob>=0.17.0
+
+# Logging and Monitoring
+loguru>=0.7.0
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+
+# Development Tools
+black>=23.0.0
+flake8>=6.0.0
+mypy>=1.5.0
+
+# Optional: For advanced NLP features
+# transformers>=4.30.0
+# torch>=2.0.0
+
+# Optional: For database support
+# sqlalchemy>=2.0.0
+# sqlite3  # Built-in with Python
+
+# Optional: For caching
+# redis>=4.6.0
+# diskcache>=5.6.0

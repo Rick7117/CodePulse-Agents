@@ -1,6 +1,4 @@
 .env
 .DS_Store
-src/auto_search/*
-src/main_archive.py
 auto_search/*
 report/*
